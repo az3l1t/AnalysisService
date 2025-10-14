@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: analysis
+  data:
+    mongodb:
+      host: localhost
+      username: mongodb
+      password: password
+      authentication-database: admin
+      port: 27017
+      database: analysis
+  activemq:
+    broker-url: tcp://localhost:61616
+    user: admin
+    password: admin
+    packages:
+      trust-all: true
+  analysis:
+    queue-send-name: analysis-send-queue
+    queue-get-name: analysis-get-queue
+emias:
+  url: http://localhost:8082
+server:
+  port: 8081
