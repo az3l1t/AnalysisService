@@ -97,6 +97,10 @@ yc resource-manager folder add-access-binding "$FOLDER_ID" \
   --role serverless.containers.editor \
   --subject serviceAccount:$SA_ID 2>/dev/null || echo "Роль уже назначена"
 
+yc resource-manager folder add-access-binding "$FOLDER_ID" \
+  --role serverless.containers.admin \
+  --subject serviceAccount:$SA_ID 2>/dev/null || echo "Роль уже назначена"
+
 echo -e "${GREEN}✅ Роли назначены${NC}"
 
 echo ""
