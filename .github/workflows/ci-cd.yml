@@ -146,7 +146,7 @@ jobs:
         export PATH=$HOME/yandex-cloud/bin:$PATH
         
         # Создаем временный файл с credentials
-        echo '${{ secrets.YC_SA_JSON_CREDENTIALS }}' > $YC_SERVICE_ACCOUNT_KEY_FILE
+        echo "${{ secrets.YC_SA_JSON_CREDENTIALS }}" > $YC_SERVICE_ACCOUNT_KEY_FILE
         
         # Настраиваем YC CLI с service account key
         yc config profile create github-actions || true
