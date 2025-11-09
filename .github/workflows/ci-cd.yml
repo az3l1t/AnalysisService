@@ -131,10 +131,11 @@ jobs:
       if: secrets.DATABASE_URL != ''
       run: |
         echo "📦 Installing Yandex Cloud CLI..."
-        curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
-        export PATH=$HOME/yandex-cloud/bin:$PATH
+        curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -i
         echo "$HOME/yandex-cloud/bin" >> $GITHUB_PATH
+        export PATH=$HOME/yandex-cloud/bin:$PATH
         yc version
+        echo "✅ Yandex Cloud CLI installed"
     
     - name: Configure Yandex Cloud CLI
       if: secrets.DATABASE_URL != ''
