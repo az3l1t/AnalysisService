@@ -217,10 +217,12 @@ jobs:
         echo "✅ Deployment completed successfully!"
     
     - name: Get service URL
-      if: secrets.DATABASE_URL != ''
+      if: secrets.DATABASE_URL != '' && steps.check_container.outputs.exists == 'true'
+      env:
+        YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
       run: |
         export PATH=$HOME/yandex-cloud/bin:$PATH
-        SERVICE_URL=$(yc serverless container get --name auth-service --folder-id ${{ secrets.YC_FOLDER_ID }} --format json | jq -r '.url' || echo "URL not available")
+        SERVICE_URL=$(yc serverless container get --name auth-service --folder-id $YC_FOLDER_ID --format json | jq -r '.url' || echo "URL not available")
         echo "🌐 Service URL: $SERVICE_URL"
         if [ "$SERVICE_URL" != "null" ] && [ -n "$SERVICE_URL" ] && [ "$SERVICE_URL" != "URL not available" ]; then
           echo "✅ Service deployed at: $SERVICE_URL" >> $GITHUB_STEP_SUMMARY
