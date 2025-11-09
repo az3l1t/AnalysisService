@@ -45,13 +45,34 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y curl unzip
+    
+    - name: Install Yandex Cloud CLI
+      run: |
+        echo "📦 Installing Yandex Cloud CLI..."
+        curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -i
+        echo "$HOME/yandex-cloud/bin" >> $GITHUB_PATH
+        export PATH=$HOME/yandex-cloud/bin:$PATH
+        yc version
+    
     - name: Configure Yandex Cloud CLI
-      uses: yc-actions/yc-cli@v1
-      with:
-        yc-sa-json-credentials: ${{ secrets.YC_SA_JSON_CREDENTIALS }}
+      env:
+        YC_SERVICE_ACCOUNT_KEY_FILE: /tmp/yc-sa-key.json
+        YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
+      run: |
+        export PATH=$HOME/yandex-cloud/bin:$PATH
+        echo "🔐 Configuring Yandex Cloud CLI..."
+        echo "${{ secrets.YC_SA_JSON_CREDENTIALS }}" > $YC_SERVICE_ACCOUNT_KEY_FILE
+        yc config profile create github-actions || true
+        yc config set service-account-key $YC_SERVICE_ACCOUNT_KEY_FILE
+        yc config set folder-id $YC_FOLDER_ID
     
     - name: Login to Yandex Container Registry
       run: |
+        export PATH=$HOME/yandex-cloud/bin:$PATH
         yc container registry configure-docker
     
     - name: Build Docker image
@@ -70,13 +91,34 @@ jobs:
     if: github.ref == 'refs/heads/main'
     
     steps:
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y jq curl unzip
+    
+    - name: Install Yandex Cloud CLI
+      run: |
+        echo "📦 Installing Yandex Cloud CLI..."
+        curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -i
+        echo "$HOME/yandex-cloud/bin" >> $GITHUB_PATH
+        export PATH=$HOME/yandex-cloud/bin:$PATH
+        yc version
+    
     - name: Configure Yandex Cloud CLI
-      uses: yc-actions/yc-cli@v1
-      with:
-        yc-sa-json-credentials: ${{ secrets.YC_SA_JSON_CREDENTIALS }}
+      env:
+        YC_SERVICE_ACCOUNT_KEY_FILE: /tmp/yc-sa-key.json
+        YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
+      run: |
+        export PATH=$HOME/yandex-cloud/bin:$PATH
+        echo "🔐 Configuring Yandex Cloud CLI..."
+        echo "${{ secrets.YC_SA_JSON_CREDENTIALS }}" > $YC_SERVICE_ACCOUNT_KEY_FILE
+        yc config profile create github-actions || true
+        yc config set service-account-key $YC_SERVICE_ACCOUNT_KEY_FILE
+        yc config set folder-id $YC_FOLDER_ID
     
     - name: Deploy to Yandex Cloud Run
       run: |
+        export PATH=$HOME/yandex-cloud/bin:$PATH
         yc serverless container create --name auth-service --folder-id ${{ secrets.YC_FOLDER_ID }} || true
         
         yc serverless container revision deploy \
