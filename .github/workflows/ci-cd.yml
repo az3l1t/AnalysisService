@@ -159,17 +159,38 @@ jobs:
         
         echo "✅ Yandex Cloud CLI configured"
     
-    - name: Deploy to Yandex Cloud Run
+    - name: Check if container exists
       if: secrets.DATABASE_URL != ''
+      id: check_container
+      env:
+        YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
+      run: |
+        export PATH=$HOME/yandex-cloud/bin:$PATH
+        echo "🔍 Checking if container exists..."
+        if yc serverless container get --name auth-service --folder-id $YC_FOLDER_ID &>/dev/null; then
+          echo "✅ Container exists"
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "❌ Container does not exist"
+          echo "exists=false" >> $GITHUB_OUTPUT
+          echo ""
+          echo "⚠️  Container 'auth-service' not found!"
+          echo "Please create it manually:"
+          echo "  1. Open: https://console.cloud.yandex.ru/folders/$YC_FOLDER_ID/serverless/containers"
+          echo "  2. Click 'Create container'"
+          echo "  3. Name: auth-service"
+          echo "  4. After creation, re-run this workflow"
+        fi
+    
+    - name: Deploy to Yandex Cloud Run
+      if: secrets.DATABASE_URL != '' && steps.check_container.outputs.exists == 'true'
       env:
         REGISTRY: ${{ env.REGISTRY }}
         IMAGE_NAME: ${{ env.IMAGE_NAME }}
+        YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
       run: |
         export PATH=$HOME/yandex-cloud/bin:$PATH
         echo "🚀 Deploying to Yandex Cloud Run..."
-        
-        # Создаем контейнер если не существует
-        yc serverless container create --name auth-service --folder-id ${{ secrets.YC_FOLDER_ID }} || echo "Container already exists"
         
         # Используем тег 'latest' для main branch
         FULL_IMAGE="${REGISTRY}/${IMAGE_NAME}:latest"
@@ -178,7 +199,7 @@ jobs:
         # Деплоим новую ревизию с образом из GitHub Container Registry
         yc serverless container revision deploy \
           --container-name auth-service \
-          --folder-id ${{ secrets.YC_FOLDER_ID }} \
+          --folder-id $YC_FOLDER_ID \
           --image ${FULL_IMAGE} \
           --service-account-id ${{ secrets.YC_SERVICE_ACCOUNT_ID }} \
           --cores 1 \
