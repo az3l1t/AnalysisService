@@ -1,0 +1,168 @@
+name: CI/CD Pipeline (GitHub Container Registry)
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/medical-analysis-auth
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: auth_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+        pip install -r requirements.txt
+    
+    - name: Run tests
+      env:
+        DATABASE_URL: sqlite:///./test.db
+        SECRET_KEY: test-secret-key
+      run: |
+        pytest tests/ -v --cov=app --cov-report=xml --cov-report=term-missing
+    
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: false
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v4
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=sha,format=long
+          type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+          type=ref,event=branch
+          type=ref,event=pr
+    
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+    
+    - name: Output image info
+      run: |
+        echo "📦 Built images:"
+        echo "${{ steps.meta.outputs.tags }}" | sed 's/,/\n/g' | sed 's/^/  - /'
+        echo ""
+        echo "🎯 Main image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Install jq
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y jq
+    
+    - name: Configure Yandex Cloud CLI
+      uses: yc-actions/yc-cli@v1
+      with:
+        yc-sa-json-credentials: ${{ secrets.YC_SA_JSON_CREDENTIALS }}
+    
+    - name: Deploy to Yandex Cloud Run
+      env:
+        REGISTRY: ${{ env.REGISTRY }}
+        IMAGE_NAME: ${{ env.IMAGE_NAME }}
+      run: |
+        echo "🚀 Deploying to Yandex Cloud Run..."
+        
+        # Создаем контейнер если не существует
+        yc serverless container create --name auth-service --folder-id ${{ secrets.YC_FOLDER_ID }} || echo "Container already exists"
+        
+        # Используем образ из GitHub Container Registry
+        # Для публичных репозиториев не нужна аутентификация
+        # Используем тег 'latest' для main branch (создан в build step)
+        FULL_IMAGE="${REGISTRY}/${IMAGE_NAME}:latest"
+        echo "📦 Using image: ${FULL_IMAGE}"
+        echo "ℹ️  For main branch, image is tagged as 'latest'"
+        
+        # Деплоим новую ревизию с образом из GitHub Container Registry
+        yc serverless container revision deploy \
+          --container-name auth-service \
+          --folder-id ${{ secrets.YC_FOLDER_ID }} \
+          --image ${FULL_IMAGE} \
+          --service-account-id ${{ secrets.YC_SERVICE_ACCOUNT_ID }} \
+          --cores 1 \
+          --memory 512MB \
+          --execution-timeout 30s \
+          --concurrency 10 \
+          --environment \
+            DATABASE_URL="${{ secrets.DATABASE_URL }}",\
+            SECRET_KEY="${{ secrets.SECRET_KEY }}",\
+            ALGORITHM="HS256",\
+            ACCESS_TOKEN_EXPIRE_MINUTES="30" \
+          --min-instances 1 \
+          --max-instances 3
+        
+        echo "✅ Deployment completed successfully!"
+    
+    - name: Get service URL
+      run: |
+        SERVICE_URL=$(yc serverless container get --name auth-service --folder-id ${{ secrets.YC_FOLDER_ID }} --format json | jq -r '.url' || echo "URL not available")
+        echo "🌐 Service URL: $SERVICE_URL"
+        if [ "$SERVICE_URL" != "null" ] && [ -n "$SERVICE_URL" ] && [ "$SERVICE_URL" != "URL not available" ]; then
+          echo "✅ Service deployed at: $SERVICE_URL" >> $GITHUB_STEP_SUMMARY
+          echo "🌐 Service URL: $SERVICE_URL"
+        else
+          echo "⚠️ Service URL not available yet. Check Cloud Run console."
+        fi
+

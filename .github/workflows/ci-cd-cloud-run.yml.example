@@ -1,0 +1,94 @@
+name: CI/CD Pipeline - Yandex Cloud Run
+
+# Пример полной конфигурации для деплоя в Yandex Cloud Run
+# Скопируйте этот файл в .github/workflows/ci-cd.yml и настройте секреты
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  REGISTRY: cr.yandex
+  IMAGE_NAME: ${{ secrets.YC_REGISTRY_ID }}/medical-analysis-auth
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+        pip install -r requirements.txt
+    
+    - name: Run tests
+      env:
+        DATABASE_URL: sqlite:///./test.db
+        SECRET_KEY: test-secret-key
+      run: |
+        pytest tests/ -v --cov=app --cov-report=xml
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Configure Yandex Cloud CLI
+      uses: yc-actions/yc-cli@v1
+      with:
+        yc-sa-json-credentials: ${{ secrets.YC_SA_JSON_CREDENTIALS }}
+    
+    - name: Login to Yandex Container Registry
+      run: |
+        yc container registry configure-docker
+    
+    - name: Build Docker image
+      run: |
+        docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
+        docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+    
+    - name: Push Docker image
+      run: |
+        docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Configure Yandex Cloud CLI
+      uses: yc-actions/yc-cli@v1
+      with:
+        yc-sa-json-credentials: ${{ secrets.YC_SA_JSON_CREDENTIALS }}
+    
+    - name: Deploy to Yandex Cloud Run
+      run: |
+        yc serverless container create --name auth-service --folder-id ${{ secrets.YC_FOLDER_ID }} || true
+        
+        yc serverless container revision deploy \
+          --container-name auth-service \
+          --folder-id ${{ secrets.YC_FOLDER_ID }} \
+          --image ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+          --service-account-id ${{ secrets.YC_SERVICE_ACCOUNT_ID }} \
+          --cores 1 \
+          --memory 512MB \
+          --execution-timeout 30s \
+          --concurrency 10 \
+          --environment DATABASE_URL="${{ secrets.DATABASE_URL }}",SECRET_KEY="${{ secrets.SECRET_KEY }}" \
+          --min-instances 1 \
+          --max-instances 3
+
