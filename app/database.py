@@ -32,14 +32,13 @@ database_url = re.sub(r'[?&]pgbouncer=true', '', database_url)
 database_url = re.sub(r'\?$', '', database_url)
 
 # Настройки подключения для Supabase
+# psycopg3 не поддерживает server_settings в connect_args
 connect_args = {
     "connect_timeout": 10,  # Увеличиваем таймаут до 10 секунд
 }
 
-# Если используется connection pooler (порт 6543), добавляем специальные настройки
-if ":6543" in database_url:
-    # Connection pooler mode - отключаем JIT для лучшей совместимости
-    connect_args["server_settings"] = {"jit": "off"}
+# Connection pooler (порт 6543) работает без дополнительных настроек
+# JIT отключение не требуется для connection pooler
 
 engine = create_engine(
     database_url,
