@@ -20,24 +20,18 @@ class Settings(BaseSettings):
 settings = Settings()
 
 # Создаем engine с настройками для работы без подключения при старте
-# Добавляем параметры для принудительного использования IPv4 и улучшенной работы с Supabase
+# Добавляем параметры для улучшенной работы с Supabase
+database_url = settings.database_url
+
+# Настройки подключения для Supabase
 connect_args = {
     "connect_timeout": 10,  # Увеличиваем таймаут до 10 секунд
-    "sslmode": "require",   # Требуем SSL для Supabase
 }
 
-# Если используется connection pooler, добавляем соответствующие параметры
-database_url = settings.database_url
-if "?pgbouncer=true" in database_url or ":6543" in database_url:
-    # Connection pooler mode - используем разные настройки
+# Если используется connection pooler (порт 6543), добавляем специальные настройки
+if ":6543" in database_url or "pgbouncer" in database_url.lower():
+    # Connection pooler mode - отключаем JIT для лучшей совместимости
     connect_args["server_settings"] = {"jit": "off"}
-else:
-    # Прямое подключение - добавляем параметры для IPv4
-    if "?" in database_url:
-        database_url += "&"
-    else:
-        database_url += "?"
-    database_url += "sslmode=require"
 
 engine = create_engine(
     database_url,
