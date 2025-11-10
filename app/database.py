@@ -2,6 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
+from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 
 class Settings(BaseSettings):
     database_url: str = Field(
@@ -20,25 +21,51 @@ class Settings(BaseSettings):
 settings = Settings()
 
 # Создаем engine с настройками для работы без подключения при старте
-# Добавляем параметры для улучшенной работы с Supabase
+# Очищаем URL от параметров, которые не поддерживает psycopg3
 database_url = settings.database_url
 
-# Удаляем параметр pgbouncer=true из URL, если он есть
-# psycopg3 не поддерживает этот параметр, connection pooler работает через порт 6543
-import re
-# Удаляем ?pgbouncer=true или &pgbouncer=true из URL
-database_url = re.sub(r'[?&]pgbouncer=true', '', database_url)
-# Удаляем ведущий ? если он остался после удаления параметра
-database_url = re.sub(r'\?$', '', database_url)
+# Парсим URL и удаляем неподдерживаемые параметры
+try:
+    parsed = urlparse(database_url)
+    if parsed.query:
+        # Парсим query параметры
+        query_params = parse_qs(parsed.query, keep_blank_values=True)
+        
+        # Удаляем параметры, которые psycopg3 не поддерживает
+        unsupported_params = ['server_settings', 'pgbouncer', 'sslmode']
+        # Находим и удаляем все ключи (с учетом регистра)
+        keys_to_remove = []
+        for key in query_params.keys():
+            if any(key.lower() == param.lower() for param in unsupported_params):
+                keys_to_remove.append(key)
+        for key in keys_to_remove:
+            query_params.pop(key, None)
+        
+        # Собираем URL обратно
+        if query_params:
+            # Преобразуем обратно в строку query
+            new_query = urlencode(query_params, doseq=True)
+            database_url = urlunparse(parsed._replace(query=new_query))
+        else:
+            # Если параметров не осталось, удаляем query часть
+            database_url = urlunparse(parsed._replace(query=''))
+except Exception:
+    # Если парсинг не удался, просто удаляем проблемные параметры через regex
+    import re
+    # Удаляем server_settings и другие неподдерживаемые параметры
+    database_url = re.sub(r'[?&](server_settings|pgbouncer|sslmode)=[^&]*', '', database_url)
+    # Очищаем возможные двойные разделители
+    database_url = re.sub(r'\?&+', '?', database_url)
+    database_url = re.sub(r'&+', '&', database_url)
+    # Удаляем ведущий или завершающий разделитель
+    database_url = re.sub(r'\?$', '', database_url)
+    database_url = re.sub(r'&$', '', database_url)
 
-# Настройки подключения для Supabase
-# psycopg3 не поддерживает server_settings в connect_args
+# Настройки подключения
+# psycopg3 не поддерживает server_settings и другие параметры в connect_args
 connect_args = {
-    "connect_timeout": 10,  # Увеличиваем таймаут до 10 секунд
+    "connect_timeout": 10,  # Таймаут подключения 10 секунд
 }
-
-# Connection pooler (порт 6543) работает без дополнительных настроек
-# JIT отключение не требуется для connection pooler
 
 engine = create_engine(
     database_url,
