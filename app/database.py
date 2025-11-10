@@ -1,14 +1,21 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field
 
 class Settings(BaseSettings):
-    database_url: str = "postgresql+psycopg://user:password@localhost:5432/auth_db"
-    secret_key: str = "your-secret-key-change-in-production"
-    algorithm: str = "HS256"
-    access_token_expire_minutes: int = 30
+    database_url: str = Field(
+        default="postgresql+psycopg://user:password@localhost:5432/auth_db",
+        alias="DATABASE_URL"
+    )
+    secret_key: str = Field(
+        default="your-secret-key-change-in-production",
+        alias="SECRET_KEY"
+    )
+    algorithm: str = Field(default="HS256", alias="ALGORITHM")
+    access_token_expire_minutes: int = Field(default=30, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
     
-    model_config = SettingsConfigDict(env_file=".env")
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
 
 settings = Settings()
 
