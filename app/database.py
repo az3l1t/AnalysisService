@@ -23,13 +23,21 @@ settings = Settings()
 # Добавляем параметры для улучшенной работы с Supabase
 database_url = settings.database_url
 
+# Удаляем параметр pgbouncer=true из URL, если он есть
+# psycopg3 не поддерживает этот параметр, connection pooler работает через порт 6543
+import re
+# Удаляем ?pgbouncer=true или &pgbouncer=true из URL
+database_url = re.sub(r'[?&]pgbouncer=true', '', database_url)
+# Удаляем ведущий ? если он остался после удаления параметра
+database_url = re.sub(r'\?$', '', database_url)
+
 # Настройки подключения для Supabase
 connect_args = {
     "connect_timeout": 10,  # Увеличиваем таймаут до 10 секунд
 }
 
 # Если используется connection pooler (порт 6543), добавляем специальные настройки
-if ":6543" in database_url or "pgbouncer" in database_url.lower():
+if ":6543" in database_url:
     # Connection pooler mode - отключаем JIT для лучшей совместимости
     connect_args["server_settings"] = {"jit": "off"}
 
