@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth Service</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --color-bg: #f5f5f7;
+            --color-white: #ffffff;
+            --color-text: #1d1d1f;
+            --color-text-secondary: #86868b;
+            --color-primary: #0071e3;
+            --color-primary-hover: #0077ed;
+            --color-border: #d2d2d7;
+            --color-success: #34c759;
+            --color-error: #ff3b30;
+            --color-shadow: rgba(0, 0, 0, 0.1);
+            --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--color-bg);
+            color: var(--color-text);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            line-height: 1.47059;
+            font-weight: 400;
+            letter-spacing: -0.022em;
+            font-size: 17px;
+        }
+
+        .container {
+            background: var(--color-white);
+            border-radius: 18px;
+            box-shadow: 0 4px 20px var(--color-shadow);
+            max-width: 440px;
+            width: 100%;
+            padding: 48px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo h1 {
+            font-size: 32px;
+            font-weight: 600;
+            letter-spacing: -0.003em;
+            color: var(--color-text);
+            margin-bottom: 8px;
+        }
+
+        .logo p {
+            font-size: 15px;
+            color: var(--color-text-secondary);
+            font-weight: 400;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 32px;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px 0;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 17px;
+            color: var(--color-text-secondary);
+            transition: all 0.2s ease;
+            position: relative;
+            font-weight: 400;
+            font-family: var(--font-sans);
+        }
+
+        .tab::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--color-primary);
+            transform: scaleX(0);
+            transition: transform 0.2s ease;
+        }
+
+        .tab.active {
+            color: var(--color-text);
+            font-weight: 500;
+        }
+
+        .tab.active::after {
+            transform: scaleX(1);
+        }
+
+        .tab:hover {
+            color: var(--color-text);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--color-text);
+            font-weight: 400;
+            font-size: 15px;
+            letter-spacing: -0.016em;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--color-border);
+            border-radius: 12px;
+            font-size: 17px;
+            font-family: var(--font-sans);
+            transition: all 0.2s ease;
+            background: var(--color-white);
+            color: var(--color-text);
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
+        }
+
+        input::placeholder {
+            color: var(--color-text-secondary);
+        }
+
+        button {
+            width: 100%;
+            padding: 14px 22px;
+            background: var(--color-primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 17px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: var(--font-sans);
+            letter-spacing: -0.022em;
+            margin-top: 8px;
+        }
+
+        button:hover {
+            background: var(--color-primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .message {
+            padding: 14px 16px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            font-size: 15px;
+            display: none;
+            line-height: 1.47059;
+        }
+
+        .message.success {
+            background: rgba(52, 199, 89, 0.1);
+            color: var(--color-success);
+            border: 1px solid rgba(52, 199, 89, 0.2);
+            display: block;
+        }
+
+        .message.error {
+            background: rgba(255, 59, 48, 0.1);
+            color: var(--color-error);
+            border: 1px solid rgba(255, 59, 48, 0.2);
+            display: block;
+        }
+
+        .message.info {
+            background: rgba(0, 113, 227, 0.1);
+            color: var(--color-primary);
+            border: 1px solid rgba(0, 113, 227, 0.2);
+            display: block;
+        }
+
+        .user-info {
+            background: var(--color-bg);
+            padding: 24px;
+            border-radius: 12px;
+            margin-top: 24px;
+        }
+
+        .user-info h3 {
+            color: var(--color-text);
+            margin-bottom: 16px;
+            font-size: 22px;
+            font-weight: 600;
+            letter-spacing: -0.003em;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: var(--color-text-secondary);
+            font-size: 15px;
+            font-weight: 400;
+        }
+
+        .info-value {
+            color: var(--color-text);
+            font-size: 15px;
+            font-weight: 500;
+            text-align: right;
+        }
+
+        .token-section {
+            margin-top: 24px;
+            padding: 16px;
+            background: var(--color-bg);
+            border-radius: 12px;
+        }
+
+        .token-label {
+            font-size: 13px;
+            color: var(--color-text-secondary);
+            margin-bottom: 8px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .token-value {
+            font-size: 13px;
+            font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+            color: var(--color-text);
+            word-break: break-all;
+            line-height: 1.6;
+            background: var(--color-white);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--color-border);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .logout-btn {
+            background: var(--color-text);
+            margin-top: 20px;
+        }
+
+        .logout-btn:hover {
+            background: var(--color-text);
+            opacity: 0.8;
+            box-shadow: 0 4px 12px rgba(29, 29, 31, 0.3);
+        }
+
+        .divider {
+            height: 1px;
+            background: var(--color-border);
+            margin: 32px 0;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 32px 24px;
+                border-radius: 0;
+            }
+
+            .logo h1 {
+                font-size: 28px;
+            }
+        }
+
+        /* Плавные анимации */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .tab-content {
+            animation: fadeIn 0.3s ease;
+        }
+
+        /* Улучшенный фокус для accessibility */
+        *:focus-visible {
+            outline: 2px solid var(--color-primary);
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <h1>Auth</h1>
+            <p>Вход и регистрация</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('login', this)">Вход</button>
+            <button class="tab" onclick="showTab('register', this)">Регистрация</button>
+        </div>
+
+        <div id="message" class="message"></div>
+
+        <!-- Форма входа -->
+        <div id="login-form" class="tab-content">
+            <form onsubmit="login(event)">
+                <div class="form-group">
+                    <label for="login-username">Имя пользователя</label>
+                    <input type="text" id="login-username" required autocomplete="username" placeholder="Введите имя пользователя">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Пароль</label>
+                    <input type="password" id="login-password" required autocomplete="current-password" placeholder="Введите пароль">
+                </div>
+                <button type="submit">Войти</button>
+            </form>
+        </div>
+
+        <!-- Форма регистрации -->
+        <div id="register-form" class="tab-content hidden">
+            <form onsubmit="register(event)">
+                <div class="form-group">
+                    <label for="register-username">Имя пользователя</label>
+                    <input type="text" id="register-username" required autocomplete="username" placeholder="Введите имя пользователя">
+                </div>
+                <div class="form-group">
+                    <label for="register-email">Email</label>
+                    <input type="email" id="register-email" required autocomplete="email" placeholder="example@email.com">
+                </div>
+                <div class="form-group">
+                    <label for="register-password">Пароль</label>
+                    <input type="password" id="register-password" required autocomplete="new-password" placeholder="Введите пароль">
+                </div>
+                <button type="submit">Зарегистрироваться</button>
+            </form>
+        </div>
+
+        <!-- Информация о пользователе -->
+        <div id="user-info" class="hidden">
+            <div class="user-info">
+                <h3>Профиль</h3>
+                <div class="info-row">
+                    <span class="info-label">Имя</span>
+                    <span class="info-value" id="user-username"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Email</span>
+                    <span class="info-value" id="user-email"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">ID</span>
+                    <span class="info-value" id="user-id"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Статус</span>
+                    <span class="info-value" id="user-active"></span>
+                </div>
+            </div>
+
+            <div class="token-section">
+                <div class="token-label">Токен доступа</div>
+                <div class="token-value" id="user-token"></div>
+            </div>
+
+            <button class="logout-btn" onclick="logout()">Выйти</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        let currentToken = localStorage.getItem('token');
+
+        // Проверка токена при загрузке
+        if (currentToken) {
+            checkToken();
+        }
+
+        function showTab(tabName, tabElement) {
+            // Обновление табов
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            tabElement.classList.add('active');
+
+            // Показ соответствующей формы
+            document.getElementById('login-form').classList.toggle('hidden', tabName !== 'login');
+            document.getElementById('register-form').classList.toggle('hidden', tabName !== 'register');
+        }
+
+        function showMessage(text, type) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.className = `message ${type}`;
+            setTimeout(() => {
+                messageEl.className = 'message';
+            }, 5000);
+        }
+
+        async function register(event) {
+            event.preventDefault();
+            const username = document.getElementById('register-username').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+
+            const button = event.target.querySelector('button[type="submit"]');
+            button.disabled = true;
+            button.textContent = 'Регистрация...';
+
+            try {
+                const response = await fetch(`${API_BASE}/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, email, password }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage('Регистрация успешна. Теперь вы можете войти.', 'success');
+                    // Переключение на вкладку входа
+                    document.querySelectorAll('.tab')[0].click();
+                    // Очистка формы
+                    event.target.reset();
+                } else {
+                    showMessage(data.detail || 'Ошибка при регистрации', 'error');
+                }
+            } catch (error) {
+                showMessage('Ошибка соединения с сервером', 'error');
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Зарегистрироваться';
+            }
+        }
+
+        async function login(event) {
+            event.preventDefault();
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+
+            const button = event.target.querySelector('button[type="submit"]');
+            button.disabled = true;
+            button.textContent = 'Вход...';
+
+            try {
+                const formData = new URLSearchParams();
+                formData.append('username', username);
+                formData.append('password', password);
+
+                const response = await fetch(`${API_BASE}/token`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: formData,
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    currentToken = data.access_token;
+                    localStorage.setItem('token', currentToken);
+                    showMessage('Вход выполнен успешно', 'success');
+                    await loadUserInfo();
+                } else {
+                    showMessage(data.detail || 'Неверное имя пользователя или пароль', 'error');
+                }
+            } catch (error) {
+                showMessage('Ошибка соединения с сервером', 'error');
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Войти';
+            }
+        }
+
+        async function loadUserInfo() {
+            if (!currentToken) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/users/me`, {
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`,
+                    },
+                });
+
+                if (response.ok) {
+                    const user = await response.json();
+                    document.getElementById('user-username').textContent = user.username;
+                    document.getElementById('user-email').textContent = user.email;
+                    document.getElementById('user-id').textContent = user.id;
+                    document.getElementById('user-active').textContent = user.is_active ? 'Активен' : 'Неактивен';
+                    document.getElementById('user-token').textContent = currentToken;
+
+                    // Показ информации о пользователе
+                    document.getElementById('login-form').classList.add('hidden');
+                    document.getElementById('register-form').classList.add('hidden');
+                    document.querySelector('.tabs').classList.add('hidden');
+                    document.getElementById('user-info').classList.remove('hidden');
+                    document.getElementById('message').classList.add('hidden');
+                } else {
+                    localStorage.removeItem('token');
+                    currentToken = null;
+                }
+            } catch (error) {
+                showMessage('Ошибка загрузки информации о пользователе', 'error');
+            }
+        }
+
+        async function checkToken() {
+            if (currentToken) {
+                await loadUserInfo();
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            currentToken = null;
+            document.getElementById('user-info').classList.add('hidden');
+            document.getElementById('login-form').classList.remove('hidden');
+            document.querySelector('.tabs').classList.remove('hidden');
+            document.querySelectorAll('.tab')[0].click();
+            showMessage('Вы вышли из системы', 'info');
+        }
+    </script>
+</body>
+</html>
