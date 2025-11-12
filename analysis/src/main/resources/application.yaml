@@ -3,14 +3,9 @@ spring:
     name: analysis
   data:
     mongodb:
-      host: localhost
-      username: mongodb
-      password: password
-      authentication-database: admin
-      port: 27017
-      database: analysis
+      uri: mongodb://${MONGO_USERNAME:mongodb}:${MONGO_PASSWORD:password}@${MONGO_HOST:localhost}:${MONGO_PORT:27017}/${MONGO_DB:analysis}?authSource=${MONGO_AUTH_DB:admin}
   activemq:
-    broker-url: tcp://localhost:61616
+    broker-url: ${ACTIVEMQ_BROKER_URL:tcp://localhost:61616}
     user: admin
     password: admin
     packages:
@@ -19,6 +14,6 @@ spring:
     queue-send-name: analysis-send-queue
     queue-get-name: analysis-get-queue
 emias:
-  url: http://localhost:8082
+  url: ${EMIAS_URL:http://localhost:8081}
 server:
   port: 8081

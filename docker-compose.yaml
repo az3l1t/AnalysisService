@@ -25,3 +25,39 @@ services:
     container_name: redis
     ports:
       - "6379:6379"
+  analysis:
+    build:
+      context: ./analysis
+      dockerfile: Dockerfile
+    container_name: analysis
+    depends_on:
+      - mongo
+      - activemq
+      - redis
+    ports:
+      - "8081:8081"
+    environment:
+      MONGO_HOST: mongo
+      MONGO_PORT: 27017
+      MONGO_USERNAME: mongodb
+      MONGO_PASSWORD: password
+      MONGO_AUTH_DB: admin
+      MONGO_DB: analysis
+      ACTIVEMQ_BROKER_URL: tcp://activemq:61616
+      EMIAS_URL: http://emias:8082
+  emias:
+    build:
+      context: ./emias
+      dockerfile: Dockerfile
+    container_name: emias
+    depends_on:
+      - mongo
+      - activemq
+      - redis
+    environment:
+      ACTIVEMQ_BROKER_URL: tcp://activemq:61616
+      ACTIVEMQ_USER: admin
+      ACTIVEMQ_PASSWORD: admin
+      REDIS_HOST: redis
+    ports:
+      - "8082:8082"
