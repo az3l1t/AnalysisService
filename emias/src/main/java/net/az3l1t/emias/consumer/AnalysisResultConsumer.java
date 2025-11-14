@@ -15,7 +15,6 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @RequiredArgsConstructor
 public class AnalysisResultConsumer {
-    private final RedisTemplate<String, String> redisTemplate;
     private final AnalysisRepository analysisRepository;
     private final ObjectMapper objectMapper;
 

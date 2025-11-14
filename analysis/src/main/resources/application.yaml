@@ -12,8 +12,9 @@ spring:
       trust-all: true
   analysis:
     queue-send-name: analysis-send-queue
-    queue-get-name: analysis-get-queue
 emias:
   url: ${EMIAS_URL:http://localhost:8081}
+jwt:
+  secret: 8fd35ee52eeae928ad871e7ce5a4cb5fe73cab6dd03922929bddd844aaf5a0d7
 server:
   port: 8081
