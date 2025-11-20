@@ -16,7 +16,11 @@ class Settings(BaseSettings):
     algorithm: str = Field(default="HS256", alias="ALGORITHM")
     access_token_expire_minutes: int = Field(default=30, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
     
-    model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
+    model_config = SettingsConfigDict(
+        env_file=".env", 
+        case_sensitive=False,
+        extra="ignore"  # Игнорировать лишние переменные из .env (USER_SERVICE_DATABASE_URL, AUTH_SERVICE_URL)
+    )
 
 settings = Settings()
 
