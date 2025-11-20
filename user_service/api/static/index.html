@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Service</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --color-bg: #f5f5f7;
+            --color-white: #ffffff;
+            --color-text: #1d1d1f;
+            --color-text-secondary: #86868b;
+            --color-primary: #0071e3;
+            --color-primary-hover: #0077ed;
+            --color-border: #d2d2d7;
+            --color-success: #34c759;
+            --color-error: #ff3b30;
+            --color-warning: #ff9500;
+            --color-shadow: rgba(0, 0, 0, 0.1);
+            --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--color-bg);
+            color: var(--color-text);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.47059;
+            font-weight: 400;
+            letter-spacing: -0.022em;
+            font-size: 17px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: var(--color-white);
+            border-radius: 18px;
+            box-shadow: 0 4px 20px var(--color-shadow);
+            padding: 32px 48px;
+            margin-bottom: 24px;
+        }
+
+        .logo {
+            text-align: center;
+        }
+
+        .logo h1 {
+            font-size: 32px;
+            font-weight: 600;
+            letter-spacing: -0.003em;
+            color: var(--color-text);
+            margin-bottom: 8px;
+        }
+
+        .logo p {
+            font-size: 15px;
+            color: var(--color-text-secondary);
+            font-weight: 400;
+        }
+
+        .auth-section {
+            background: var(--color-white);
+            border-radius: 18px;
+            box-shadow: 0 4px 20px var(--color-shadow);
+            padding: 48px;
+            margin-bottom: 24px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 32px;
+            border-bottom: 1px solid var(--color-border);
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            padding: 12px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 17px;
+            color: var(--color-text-secondary);
+            transition: all 0.2s ease;
+            position: relative;
+            font-weight: 400;
+            font-family: var(--font-sans);
+        }
+
+        .tab::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--color-primary);
+            transform: scaleX(0);
+            transition: transform 0.2s ease;
+        }
+
+        .tab.active {
+            color: var(--color-text);
+            font-weight: 500;
+        }
+
+        .tab.active::after {
+            transform: scaleX(1);
+        }
+
+        .tab:hover {
+            color: var(--color-text);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--color-text);
+            font-weight: 400;
+            font-size: 15px;
+            letter-spacing: -0.016em;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--color-border);
+            border-radius: 12px;
+            font-size: 17px;
+            font-family: var(--font-sans);
+            transition: all 0.2s ease;
+            background: var(--color-white);
+            color: var(--color-text);
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
+        }
+
+        input::placeholder {
+            color: var(--color-text-secondary);
+        }
+
+        button {
+            padding: 14px 22px;
+            background: var(--color-primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 17px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: var(--font-sans);
+            letter-spacing: -0.022em;
+            margin-top: 8px;
+        }
+
+        button:hover {
+            background: var(--color-primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: var(--color-text);
+        }
+
+        .btn-secondary:hover {
+            background: var(--color-text);
+            opacity: 0.8;
+        }
+
+        .btn-danger {
+            background: var(--color-error);
+        }
+
+        .btn-danger:hover {
+            background: #e6342a;
+        }
+
+        .btn-success {
+            background: var(--color-success);
+        }
+
+        .btn-success:hover {
+            background: #2eb350;
+        }
+
+        .message {
+            padding: 14px 16px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            font-size: 15px;
+            display: none;
+            line-height: 1.47059;
+        }
+
+        .message.success {
+            background: rgba(52, 199, 89, 0.1);
+            color: var(--color-success);
+            border: 1px solid rgba(52, 199, 89, 0.2);
+            display: block;
+        }
+
+        .message.error {
+            background: rgba(255, 59, 48, 0.1);
+            color: var(--color-error);
+            border: 1px solid rgba(255, 59, 48, 0.2);
+            display: block;
+        }
+
+        .message.info {
+            background: rgba(0, 113, 227, 0.1);
+            color: var(--color-primary);
+            border: 1px solid rgba(0, 113, 227, 0.2);
+            display: block;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .users-list {
+            background: var(--color-white);
+            border-radius: 18px;
+            box-shadow: 0 4px 20px var(--color-shadow);
+            padding: 32px;
+            margin-bottom: 24px;
+        }
+
+        .user-card {
+            background: var(--color-bg);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            border: 1px solid var(--color-border);
+        }
+
+        .user-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .user-name {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--color-text);
+        }
+
+        .user-badges {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .badge-role {
+            background: rgba(0, 113, 227, 0.1);
+            color: var(--color-primary);
+        }
+
+        .badge-blocked {
+            background: rgba(255, 59, 48, 0.1);
+            color: var(--color-error);
+        }
+
+        .badge-active {
+            background: rgba(52, 199, 89, 0.1);
+            color: var(--color-success);
+        }
+
+        .user-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .info-item {
+            font-size: 15px;
+        }
+
+        .info-label {
+            color: var(--color-text-secondary);
+            font-weight: 400;
+        }
+
+        .info-value {
+            color: var(--color-text);
+            font-weight: 500;
+            margin-top: 4px;
+        }
+
+        .user-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .user-actions button {
+            margin-top: 0;
+            padding: 10px 16px;
+            font-size: 15px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0;
+            }
+
+            .auth-section, .users-list {
+                border-radius: 0;
+                padding: 24px;
+            }
+
+            .user-card-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .tab-content {
+            animation: fadeIn 0.3s ease;
+        }
+
+        *:focus-visible {
+            outline: 2px solid var(--color-primary);
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <h1>User Service</h1>
+                <p>Управление пользователями</p>
+            </div>
+        </div>
+
+        <div id="auth-section" class="auth-section">
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('auth', this)">Авторизация</button>
+                <button class="tab" onclick="showTab('create', this)">Создать пользователя</button>
+                <button class="tab" onclick="showTab('list', this)">Список пользователей</button>
+            </div>
+
+            <div id="message" class="message"></div>
+
+            <!-- Форма авторизации -->
+            <div id="auth-form" class="tab-content">
+                <form onsubmit="setAuthToken(event)">
+                    <div class="form-group">
+                        <label for="auth-token">JWT Токен из Auth Service</label>
+                        <input type="text" id="auth-token" required placeholder="Вставьте токен из Auth Service" 
+                               value="">
+                        <small style="color: var(--color-text-secondary); margin-top: 8px; display: block;">
+                            <strong>Важно:</strong> Регистрация и вход происходят в <a href="http://localhost:8000/" target="_blank" style="color: var(--color-primary);">Auth Service</a> (порт 8000).<br>
+                            Получите токен там, затем вставьте его сюда.
+                        </small>
+                    </div>
+                    <button type="submit">Сохранить токен</button>
+                </form>
+            </div>
+
+            <!-- Форма создания пользователя -->
+            <div id="create-form" class="tab-content hidden">
+                <form onsubmit="createUser(event)">
+                    <div class="form-group">
+                        <label for="create-auth-user-id">Auth User ID</label>
+                        <input type="number" id="create-auth-user-id" placeholder="Автоматически берется из токена" disabled style="background: #f5f5f5; cursor: not-allowed;">
+                        <small style="color: var(--color-text-secondary); margin-top: 8px; display: block;">
+                            <strong>Примечание:</strong> Auth User ID автоматически берется из вашего токена. Просто заполните остальные поля.
+                        </small>
+                    </div>
+                    <div class="form-group">
+                        <label for="create-first-name">Имя *</label>
+                        <input type="text" id="create-first-name" required placeholder="Имя">
+                    </div>
+                    <div class="form-group">
+                        <label for="create-last-name">Фамилия *</label>
+                        <input type="text" id="create-last-name" required placeholder="Фамилия">
+                    </div>
+                    <div class="form-group">
+                        <label for="create-middle-name">Отчество</label>
+                        <input type="text" id="create-middle-name" placeholder="Отчество">
+                    </div>
+                    <div class="form-group">
+                        <label for="create-email">Email *</label>
+                        <input type="email" id="create-email" required placeholder="email@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="create-phone">Телефон</label>
+                        <input type="text" id="create-phone" placeholder="+1234567890">
+                    </div>
+                    <div class="form-group">
+                        <label>Роли *</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="role-patient" value="PATIENT" checked>
+                                <label for="role-patient" style="margin: 0;">PATIENT</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="role-doctor" value="DOCTOR">
+                                <label for="role-doctor" style="margin: 0;">DOCTOR</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="role-admin" value="ADMIN">
+                                <label for="role-admin" style="margin: 0;">ADMIN</label>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit">Создать пользователя</button>
+                </form>
+            </div>
+
+            <!-- Список пользователей -->
+            <div id="list-form" class="tab-content hidden">
+                <div style="margin-bottom: 20px;">
+                    <button onclick="loadUsers()" class="btn-secondary">Обновить список</button>
+                </div>
+                <div id="users-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        let currentToken = localStorage.getItem('userServiceToken') || '';
+
+        // Загрузка токена при старте
+        if (currentToken) {
+            document.getElementById('auth-token').value = currentToken;
+        }
+
+        function showTab(tabName, tabElement) {
+            // Обновление табов
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            tabElement.classList.add('active');
+
+            // Показ соответствующей формы
+            document.getElementById('auth-form').classList.toggle('hidden', tabName !== 'auth');
+            document.getElementById('create-form').classList.toggle('hidden', tabName !== 'create');
+            document.getElementById('list-form').classList.toggle('hidden', tabName !== 'list');
+
+            // Автоматическая загрузка списка при переходе на вкладку
+            if (tabName === 'list') {
+                loadUsers();
+            }
+        }
+
+        function showMessage(text, type) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.className = `message ${type}`;
+            setTimeout(() => {
+                messageEl.className = 'message';
+            }, 5000);
+        }
+
+        function getAuthHeaders() {
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${currentToken}`
+            };
+        }
+
+        async function setAuthToken(event) {
+            event.preventDefault();
+            const token = document.getElementById('auth-token').value.trim();
+            
+            if (!token) {
+                showMessage('Введите токен', 'error');
+                return;
+            }
+
+            currentToken = token;
+            localStorage.setItem('userServiceToken', token);
+            showMessage('Токен сохранен', 'success');
+        }
+
+        async function createUser(event) {
+            event.preventDefault();
+            
+            if (!currentToken) {
+                showMessage('Сначала сохраните токен авторизации', 'error');
+                return;
+            }
+
+            const roles = [];
+            if (document.getElementById('role-patient').checked) roles.push('PATIENT');
+            if (document.getElementById('role-doctor').checked) roles.push('DOCTOR');
+            if (document.getElementById('role-admin').checked) roles.push('ADMIN');
+
+            if (roles.length === 0) {
+                showMessage('Выберите хотя бы одну роль', 'error');
+                return;
+            }
+
+            const userData = {
+                first_name: document.getElementById('create-first-name').value,
+                last_name: document.getElementById('create-last-name').value,
+                middle_name: document.getElementById('create-middle-name').value || null,
+                email: document.getElementById('create-email').value,
+                phone: document.getElementById('create-phone').value || null,
+                roles: roles
+            };
+
+            const button = event.target.querySelector('button[type="submit"]');
+            button.disabled = true;
+            button.textContent = 'Создание...';
+
+            try {
+                const response = await fetch(`${API_BASE}/users/register`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(userData),
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage('Пользователь успешно создан', 'success');
+                    event.target.reset();
+                    document.getElementById('role-patient').checked = true;
+                    document.getElementById('role-doctor').checked = false;
+                    document.getElementById('role-admin').checked = false;
+                } else {
+                    showMessage(data.detail || 'Ошибка при создании пользователя', 'error');
+                }
+            } catch (error) {
+                showMessage('Ошибка соединения с сервером', 'error');
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Создать пользователя';
+            }
+        }
+
+        async function loadUsers() {
+            if (!currentToken) {
+                showMessage('Сначала сохраните токен авторизации', 'error');
+                return;
+            }
+
+            const container = document.getElementById('users-container');
+            container.innerHTML = '<p>Загрузка...</p>';
+
+            try {
+                const response = await fetch(`${API_BASE}/users?page=1&page_size=100`, {
+                    headers: getAuthHeaders()
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    displayUsers(data.users || []);
+                } else {
+                    let errorMessage = 'Ошибка загрузки пользователей';
+                    try {
+                        const error = await response.json();
+                        errorMessage = error.detail || errorMessage;
+                        
+                        // Специальные сообщения для разных ошибок
+                        if (response.status === 401) {
+                            errorMessage = 'Токен невалиден или истек. Получите новый токен в Auth Service.';
+                        } else if (response.status === 403) {
+                            errorMessage = 'Недостаточно прав. Требуется роль ADMIN.';
+                        } else if (response.status === 404) {
+                            errorMessage = 'Endpoint не найден. Проверьте, что сервер запущен.';
+                        }
+                    } catch (e) {
+                        errorMessage = `Ошибка ${response.status}: ${response.statusText}`;
+                    }
+                    
+                    showMessage(errorMessage, 'error');
+                    container.innerHTML = `<p style="color: var(--color-text-secondary);">${errorMessage}</p>`;
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки пользователей:', error);
+                const errorMessage = `Ошибка соединения с сервером: ${error.message}. Проверьте, что User Service запущен на ${API_BASE}`;
+                showMessage(errorMessage, 'error');
+                container.innerHTML = `<p style="color: var(--color-text-secondary);">${errorMessage}</p>`;
+            }
+        }
+
+        function displayUsers(users) {
+            const container = document.getElementById('users-container');
+            
+            if (users.length === 0) {
+                container.innerHTML = '<p style="color: var(--color-text-secondary);">Пользователи не найдены</p>';
+                return;
+            }
+
+            container.innerHTML = users.map(user => `
+                <div class="user-card">
+                    <div class="user-card-header">
+                        <div class="user-name">${user.first_name} ${user.last_name}${user.middle_name ? ' ' + user.middle_name : ''}</div>
+                        <div class="user-badges">
+                            ${user.roles.map(role => `<span class="badge badge-role">${role.name}</span>`).join('')}
+                            ${user.is_blocked ? '<span class="badge badge-blocked">Заблокирован</span>' : '<span class="badge badge-active">Активен</span>'}
+                        </div>
+                    </div>
+                    <div class="user-info">
+                        <div class="info-item">
+                            <div class="info-label">ID</div>
+                            <div class="info-value">${user.id}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Auth User ID</div>
+                            <div class="info-value">${user.auth_user_id}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Email</div>
+                            <div class="info-value">${user.email}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Телефон</div>
+                            <div class="info-value">${user.phone || '—'}</div>
+                        </div>
+                        ${user.assigned_doctor_id ? `
+                        <div class="info-item">
+                            <div class="info-label">Врач</div>
+                            <div class="info-value">ID: ${user.assigned_doctor_id}</div>
+                        </div>
+                        ` : ''}
+                        <div class="info-item">
+                            <div class="info-label">Создан</div>
+                            <div class="info-value">${new Date(user.created_at).toLocaleString('ru-RU')}</div>
+                        </div>
+                    </div>
+                    <div class="user-actions">
+                        <button onclick="updateUser(${user.id})" class="btn-secondary" style="font-size: 15px; padding: 10px 16px;">Обновить</button>
+                        ${!user.is_blocked ? 
+                            `<button onclick="blockUser(${user.id})" class="btn-danger" style="font-size: 15px; padding: 10px 16px;">Заблокировать</button>` :
+                            `<button onclick="restoreUser(${user.id})" class="btn-success" style="font-size: 15px; padding: 10px 16px;">Восстановить</button>`
+                        }
+                        <button onclick="updateUserRoles(${user.id})" class="btn-secondary" style="font-size: 15px; padding: 10px 16px;">Изменить роли</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function blockUser(userId) {
+            if (!confirm('Заблокировать пользователя?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/users/${userId}/block`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ reason: 'Блокировка через веб-интерфейс' })
+                });
+
+                if (response.ok) {
+                    showMessage('Пользователь заблокирован', 'success');
+                    loadUsers();
+                } else {
+                    const error = await response.json();
+                    showMessage(error.detail || 'Ошибка блокировки', 'error');
+                }
+            } catch (error) {
+                showMessage('Ошибка соединения с сервером', 'error');
+            }
+        }
+
+        async function restoreUser(userId) {
+            if (!confirm('Восстановить доступ пользователю?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/users/${userId}/restore`, {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+
+                if (response.ok) {
+                    showMessage('Доступ восстановлен', 'success');
+                    loadUsers();
+                } else {
+                    const error = await response.json();
+                    showMessage(error.detail || 'Ошибка восстановления', 'error');
+                }
+            } catch (error) {
+                showMessage('Ошибка соединения с сервером', 'error');
+            }
+        }
+
+        async function updateUserRoles(userId) {
+            const roles = prompt('Введите роли через запятую (PATIENT, DOCTOR, ADMIN):');
+            if (!roles) return;
+
+            const rolesList = roles.split(',').map(r => r.trim().toUpperCase());
+
+            try {
+                const response = await fetch(`${API_BASE}/users/${userId}/roles`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ roles: rolesList })
+                });
+
+                if (response.ok) {
+                    showMessage('Роли обновлены', 'success');
+                    loadUsers();
+                } else {
+                    const error = await response.json();
+                    showMessage(error.detail || 'Ошибка обновления ролей', 'error');
+                }
+            } catch (error) {
+                showMessage('Ошибка соединения с сервером', 'error');
+            }
+        }
+
+        function updateUser(userId) {
+            showMessage('Функция обновления пользователя будет реализована', 'info');
+        }
+    </script>
+</body>
+</html>
+
