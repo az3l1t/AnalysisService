@@ -24,6 +24,16 @@ public class JwtFilter extends OncePerRequestFilter {
     private final HandlerExceptionResolver handlerExceptionResolver;
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path.startsWith("/swagger-ui") ||
+               path.startsWith("/api-docs") ||
+               path.startsWith("/v3/api-docs") ||
+               path.startsWith("/swagger-resources") ||
+               path.startsWith("/webjars");
+    }
+
+    @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {

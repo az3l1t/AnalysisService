@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: analysis-test
+  data:
+    mongodb:
+      auto-index-creation: true
+  activemq:
+    broker-url: vm://localhost?broker.persistent=false
+    in-memory: true
+emias:
+  url: http://localhost:9999
+jwt:
+  secret: 8fd35ee52eeae928ad871e7ce5a4cb5fe73cab6dd03922929bddd844aaf5a0d7
+

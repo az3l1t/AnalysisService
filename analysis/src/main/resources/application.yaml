@@ -18,3 +18,13 @@ jwt:
   secret: 8fd35ee52eeae928ad871e7ce5a4cb5fe73cab6dd03922929bddd844aaf5a0d7
 server:
   port: 8081
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+    doc-expansion: none
+  show-actuator: false
