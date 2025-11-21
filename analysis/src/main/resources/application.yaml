@@ -12,6 +12,7 @@ spring:
       trust-all: true
   analysis:
     queue-send-name: analysis-send-queue
+    notification-queue-name: MQ_QUEUE
 emias:
   url: ${EMIAS_URL:http://localhost:8081}
 jwt:

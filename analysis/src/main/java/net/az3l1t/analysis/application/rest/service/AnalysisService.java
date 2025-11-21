@@ -2,6 +2,7 @@ package net.az3l1t.analysis.application.rest.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.az3l1t.analysis.application.async.service.MessageService;
 import net.az3l1t.analysis.application.rest.client.EmiasClient;
 import net.az3l1t.analysis.application.rest.mapper.AnalysisServiceMapper;
 import net.az3l1t.analysis.domain.model.AnalysisResult;
@@ -23,6 +24,7 @@ public class AnalysisService implements AnalysisResultUseCase {
     private final AnalysisResultPort resultPort;
     private final AnalysisServiceMapper analysisServiceMapper;
     private final EmiasClient emiasClient;
+    private final MessageService messageService;
 
     @Override
     @Transactional
@@ -39,8 +41,16 @@ public class AnalysisService implements AnalysisResultUseCase {
     public AnalysisResult update(UpdateInResultDto updateInResultDto) {
         AnalysisResult existingResult = resultPort.findById(updateInResultDto.getId());
         analysisServiceMapper.mergeAnalysisResult(updateInResultDto, existingResult);
-        log.info("Updated AnalysisResult: {}", existingResult);
-        return resultPort.save(existingResult);
+        AnalysisResult updatedResult = resultPort.save(existingResult);
+        log.info("Updated AnalysisResult: {}", updatedResult);
+
+        try {
+            messageService.sendNotificationForUpdate(updatedResult);
+        } catch (Exception e) {
+            log.error("Failed to send notification for update: {}", e.getMessage(), e);
+        }
+        
+        return updatedResult;
     }
 
     @Override
@@ -67,8 +77,14 @@ public class AnalysisService implements AnalysisResultUseCase {
     public void confirmAnalysisResult(String id) {
         AnalysisResult analysisResult = resultPort.findById(id);
         analysisResult.setIsConfirmed(true);
-        resultPort.save(analysisResult);
-        log.info("Confirmed AnalysisResult: {}", analysisResult);
+        AnalysisResult confirmedResult = resultPort.save(analysisResult);
+        log.info("Confirmed AnalysisResult: {}", confirmedResult);
+
+        try {
+            messageService.sendNotificationForConfirm(confirmedResult);
+        } catch (Exception e) {
+            log.error("Failed to send notification for confirm: {}", e.getMessage(), e);
+        }
     }
 
     @Override
