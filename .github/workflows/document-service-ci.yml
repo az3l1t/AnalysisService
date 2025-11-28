@@ -15,6 +15,10 @@ jobs:
     name: Run tests for document_service
     runs-on: ubuntu-latest
 
+    # делаем так, чтобы Python видел main.py в document_service
+    env:
+      PYTHONPATH: ${{ github.workspace }}/document_service
+
     defaults:
       run:
         working-directory: document_service
@@ -43,7 +47,7 @@ jobs:
     name: Build and push Docker image to Docker Hub
     needs: test
     runs-on: ubuntu-latest
-    # Образ пушим только на push (на PR только тесты)
+    # Пушим образ только на push (на PR только тесты)
     if: github.event_name == 'push'
 
     steps:
