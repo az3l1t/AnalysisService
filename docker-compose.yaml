@@ -1,122 +1,63 @@
-services:
-  document-service:
-    build: ./document_service
-    container_name: document_service
-    ports:
-      - "8001:8000"
-    volumes:
-      - ./document_service/storage:/app/storage
-      - ./document_service/fonts:/app/fonts
-    environment:
-      - PYTHONUNBUFFERED=1
-    restart: unless-stopped
-  notification-service:
-    build: ./notification_service
-    container_name: notification_service
-    ports:
-      - "8100:8100"
-    environment:
-      - MQ_HOST=activemq
-      - MQ_PORT=61613
-      - MQ_QUEUE=/queue/analysis.result.events
-      - EMAIL_FROM=no-reply@example.com
-      - EMAIL_PRINT_ONLY=true
-    volumes:
-      - ./notification_service/notifications.log:/app/notifications.log
-    restart: unless-stopped
-  db:
-    image: postgres:15-alpine
-    container_name: auth_db
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: auth_db
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U user" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-  auth-service:
-    build: ./authentication
-    container_name: auth_service
-    ports:
-      - "8000:8000"
-    environment:
-      DATABASE_URL: postgresql+psycopg://user:password@db:5432/auth_db
-      SECRET_KEY: your-secret-key-change-in-production
-      ALGORITHM: HS256
-      ACCESS_TOKEN_EXPIRE_MINUTES: 30
-    depends_on:
-      db:
-        condition: service_healthy
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-    restart: unless-stopped
-  mongo:
-    image: mongo:7.0
-    container_name: mongo
-    ports:
-      - "27017:27017"
-    environment:
-      MONGO_INITDB_DATABASE: analysis
-      MONGO_INITDB_ROOT_USERNAME: mongodb
-      MONGO_INITDB_ROOT_PASSWORD: password
-  activemq:
-    image: apache/activemq-classic:5.18.3
-    container_name: activemq
-    ports:
-      - "61616:61616"
-      - "8161:8161"
-    environment:
-      - ACTIVEMQ_ADMIN_USER=admin
-      - ACTIVEMQ_ADMIN_PASSWORD=admin
-      - JAAS_ENABLED=true
-      - JAAS_USER=admin
-      - JAAS_PASSWORD=admin
-  redis:
-    image: redis:7
-    container_name: redis
-    ports:
-      - "6379:6379"
-  analysis:
-    build:
-      context: ./analysis
-      dockerfile: Dockerfile
-    container_name: analysis
-    depends_on:
-      - mongo
-      - activemq
-      - redis
-    ports:
-      - "8081:8081"
-    environment:
-      MONGO_HOST: mongo
-      MONGO_PORT: 27017
-      MONGO_USERNAME: mongodb
-      MONGO_PASSWORD: password
-      MONGO_AUTH_DB: admin
-      MONGO_DB: analysis
-      ACTIVEMQ_BROKER_URL: tcp://activemq:61616
-      EMIAS_URL: http://emias:8082
-  emias:
-    build:
-      context: ./emias
-      dockerfile: Dockerfile
-    container_name: emias
-    depends_on:
-      - mongo
-      - activemq
-      - redis
-    environment:
-      ACTIVEMQ_BROKER_URL: tcp://activemq:61616
-      ACTIVEMQ_USER: admin
-      ACTIVEMQ_PASSWORD: admin
-      REDIS_HOST: redis
-    ports:
-      - "8082:8082"
-volumes:
-  postgres_data:
+name: Document Service CI/CD
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: Run tests for document_service
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: document_service
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run pytest
+        run: pytest -q
+
+  build-and-push:
+    name: Build and push Docker image to Docker Hub
+    needs: test
+    runs-on: ubuntu-latest
+    # Пушим образ только на push (на PR только тесты)
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set image name
+        id: vars
+        run: echo "image=${{ secrets.DOCKERHUB_USERNAME }}/document-service" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./document_service
+          file: ./document_service/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.vars.outputs.image }}:latest
+            ${{ steps.vars.outputs.image }}:${{ github.sha }}
