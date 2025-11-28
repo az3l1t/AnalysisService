@@ -65,5 +65,4 @@ jobs:
           file: ./document_service/Dockerfile
           push: true
           tags: |
-            ${{ steps.vars.outputs.image }}:latest
-            ${{ steps.vars.outputs.image }}:${{ github.sha }}
+            ${{ steps.va           ${{ steps.vars.outputs.image }}:${{ github.sha }}
